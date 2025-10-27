@@ -204,7 +204,7 @@ temporalSAEs/
 
 ## Pretrained Models
 
-Pretrained SAEs can be found at the following links:
+Pretrained SAEs can be found at the following links. Note that contextual information that can enable predicted code to function well seems to be available primarily in middle / early layers, and hence we found later layer Temporal SAEs to not outperform standard SAEs. Nevertheless, to enable experimentation, we have released all SAEs trained in this work.
 
 | Model | Layer | Type | Link |
 |-------|-------|------|------|
