@@ -1,0 +1,39 @@
+# Precompute Activations Configuration
+
+# Model and layer configuration
+llm_name: "meta-llama/Llama-3.1-8B"
+layer: 15
+hf_cache_dir: null
+dtype: "bfloat16"
+device: "cuda:0"
+do_truncate_model: false
+
+# Dataset configuration
+dataset_name: "monology/pile-uncopyrighted"
+dataset_split: "train"
+
+# Tokenization and batching
+context_length: 500
+num_tokens_per_batch: 2500 # num total tokens per batch = num_sequences * 
+add_special_tokens: true
+
+# Precomputation parameters
+num_total_tokens: 1_000_000_000  # 100T tokens
+num_tokens_per_file: 5_000  # 1M tokens per file
+submodule_dim: 4096  # Llama-3.1-8B hidden dim at layer 15
+
+# Output (Saved into a temp folder so that it doesn't screw up any other precomputed activations)
+save_dir: "../../activations_temp/precomputed_activations/precomputed_activations_llama3/"
+
+# Hydra configuration - disable logging and directory changes
+defaults:
+  - _self_
+  - override hydra/job_logging: disabled
+  - override hydra/hydra_logging: disabled
+
+hydra:
+  output_subdir: null
+  job:
+    chdir: false
+  run:
+    dir: .

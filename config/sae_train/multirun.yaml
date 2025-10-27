@@ -1,0 +1,178 @@
+hydra:
+  run:
+    dir: .
+  sweep:
+    dir: .
+    subdir: .
+  launcher:
+    _target_: hydra._internal.core_plugins.basic_launcher.BasicLauncher
+  sweeper:
+    _target_: hydra._internal.core_plugins.basic_sweeper.BasicSweeper
+    max_batch_size: null
+    params: null
+  help:
+    app_name: ${hydra.job.name}
+    header: '${hydra.help.app_name} is powered by Hydra.
+
+      '
+    footer: 'Powered by Hydra (https://hydra.cc)
+
+      Use --hydra-help to view Hydra specific help
+
+      '
+    template: '${hydra.help.header}
+
+      == Configuration groups ==
+
+      Compose your configuration from those groups (group=option)
+
+
+      $APP_CONFIG_GROUPS
+
+
+      == Config ==
+
+      Override anything in the config (foo.bar=value)
+
+
+      $CONFIG
+
+
+      ${hydra.help.footer}
+
+      '
+  hydra_help:
+    template: 'Hydra (${hydra.runtime.version})
+
+      See https://hydra.cc for more info.
+
+
+      == Flags ==
+
+      $FLAGS_HELP
+
+
+      == Configuration groups ==
+
+      Compose your configuration from those groups (For example, append hydra/job_logging=disabled
+      to command line)
+
+
+      $HYDRA_CONFIG_GROUPS
+
+
+      Use ''--cfg hydra'' to Show the Hydra config.
+
+      '
+    hydra_help: ???
+  hydra_logging:
+    version: 1
+    root:
+      level: ERROR
+    disable_existing_loggers: true
+  job_logging:
+    version: 1
+    root:
+      level: ERROR
+    disable_existing_loggers: true
+  env: {}
+  mode: MULTIRUN
+  searchpath: []
+  callbacks: {}
+  output_subdir: null
+  overrides:
+    hydra:
+    - hydra.mode=MULTIRUN
+    task:
+    - sae.n_attn_layers=1,2,4
+  job:
+    name: train_temporal_saes_parallel
+    chdir: false
+    override_dirname: sae.n_attn_layers=1,2,4
+    id: ???
+    num: ???
+    config_name: temporal_conf.yaml
+    env_set: {}
+    env_copy: []
+    config:
+      override_dirname:
+        kv_sep: '='
+        item_sep: ','
+        exclude_keys: []
+  runtime:
+    version: 1.3.2
+    version_base: '1.3'
+    cwd: /home/can/TemporalSAEs
+    config_sources:
+    - path: hydra.conf
+      schema: pkg
+      provider: hydra
+    - path: /home/can/TemporalSAEs/config/sae_train
+      schema: file
+      provider: main
+    - path: ''
+      schema: structured
+      provider: schema
+    output_dir: ???
+    choices:
+      hydra/env: default
+      hydra/callbacks: null
+      hydra/job_logging: disabled
+      hydra/hydra_logging: disabled
+      hydra/hydra_help: default
+      hydra/help: default
+      hydra/sweeper: basic
+      hydra/launcher: basic
+      hydra/output: default
+  verbose: false
+deploy: true
+tag: scratch
+seed: 42
+device: cuda:0
+device_ids:
+- 0
+num_gpus: 1
+epochs: 1
+data:
+  batch_size: 6
+  per_gpu_batch_size: 4
+  num_workers: 2
+precomp:
+  use: true
+  cache_dir: /home/can/dictionary_learning/precomputed_activations_gemma_l12_pile_100_000_000_tokens
+  num_total_steps: 2
+  context_length: 500
+  batch_size: 100
+  activation_scaling_factor: 0.32421875
+  wandb_project_name: rager-org/dictionary_learning
+  dtype: bfloat16
+  do_distributed_training: false
+  llm:
+    dimin: 2304
+sae:
+  sae_diff_type: topk
+  normalize_weights: false
+  tied_weights: true
+  block_id: 1
+  exp_factor: 4
+  kval_topk: 250
+  n_heads: 4
+  n_attn_layers: 1
+  bottleneck_factor: 1
+  gamma_reg: 10
+optimizer:
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  beta1: 0.9
+  beta2: 0.95
+  grad_clip: 1.0
+  decay_lr: true
+  warmup_iters: 200
+  min_lr: 0.0009
+eval:
+  save_tables: false
+log:
+  save_multiple: false
+  log_interval: 10
+  eval_interval: 50000
+  save_interval: 50000

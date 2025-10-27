@@ -1,0 +1,69 @@
+deploy: True
+tag: scratch
+seed: 42
+
+device_id: 'cuda:0'
+
+data:
+  epochs: 1
+  num_total_steps: 200_000 # Num_total_tokens = num_total_steps * batch_size * context_length
+  context_length: 500
+  batch_size: 100 # We could optimize batch size for faster convergence.
+  dtype: "bfloat16"
+  hf_name: "monology/pile-uncopyrighted" # could do HuggingFaceFW/fineweb as well
+  num_workers: 2
+  cache_dir: "../../activations/precomputed_activations/precomputed_activations_llama3/"
+
+llm:
+  model_hf_name: "meta-llama/Llama-3.1-8B"
+  tokenizer_hf_name: "meta-llama/Llama-3.1-8B"
+  dimin: 4096
+
+sae:
+  sae_type: 'topk' # ['relu', 'jumprelu', 'topk', 'MP', 'batchtopk', 'SpaDE']
+  block_id: 1
+  exp_factor: 4
+  kval_topk: 256 # If possible, do 128 and 512 as well.
+  mp_kval: 256
+  branchingFactor: 10
+  gamma_reg: 8
+  encoder_reg: True
+  scaling_factor: 0.085
+  
+optimizer:
+  learning_rate: 1e-3
+  weight_decay: 1e-4
+  beta1: 0.9
+  beta2: 0.95
+  grad_clip: 1.0
+  decay_lr: True
+  warmup_iters: 200
+  min_lr: 9e-4
+
+eval:
+  save_tables: False
+
+log: 
+  save_multiple: False
+  log_interval: 10
+  save_interval: 20000
+  wandb_project_name: "TemporalSAE_test"
+
+
+# Nested configs. Disable hydra logging
+defaults:
+  - _self_
+  - override hydra/job_logging: disabled
+  - override hydra/hydra_logging: disabled
+
+# Disable hydra directory structure
+hydra:
+  output_subdir: Null
+  job:
+    chdir: False
+  run:
+    dir: .
+
+  sweep:
+    dir: .
+    subdir: .
