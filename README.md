@@ -23,7 +23,7 @@ git clone <repository-url>
 cd temporalSAEs
 
 # Install dependencies
-pip install torch torchvision torchaudio
+pip install torch
 pip install transformers datasets
 pip install hydra-core omegaconf
 pip install wandb tqdm
@@ -88,12 +88,6 @@ Temporal SAEs decompose activations into:
 - **Predictable component**: Context-dependent, learned via attention
 - **Novel component**: Per-token differences, learned via standard SAE
 
-**Key Features:**
-- Multi-head attention for context modeling
-- Configurable number of attention layers
-- Tied or separate encoder/decoder weights
-- Multiple sparsity types for novel component
-
 **Training Command:**
 ```bash
 python train_temporal_saes.py --config-name=temporal_conf
@@ -115,10 +109,10 @@ Input Activations → Encoder → Sparse Codes → Decoder → Reconstructed Act
 
 ```
 Input Activations → [Predictable Path] → [Novel Path] → Combined Reconstruction
-                    ↓                    ↓
-                Attention Layers      SAE (TopK/ReLU)
-                    ↓                    ↓
-              Context Codes         Novel Codes
+                          ↓                    ↓
+                   Attention Layers      SAE (TopK/ReLU)
+                          ↓                    ↓
+                    Context Codes         Novel Codes
 ```
 
 - **Predictable Path**: Multi-head attention over previous tokens
