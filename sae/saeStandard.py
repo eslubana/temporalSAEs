@@ -155,9 +155,7 @@ class SAEStandard(torch.nn.Module):
                 B, L, D = x.shape
                 x = x.view(B*L, D)
             x = x-self.bd
-            print(f"==>> x.shape: {x.shape}")
             codes = torch.zeros(x.shape[0], self.Ae.shape[0], device=x.device, dtype=x.dtype)
-            print(f"==>> codes.shape: {codes.shape}")
 
             # Greedy selection of dictionary atoms
             for _ in range(kval):
@@ -166,7 +164,6 @@ class SAEStandard(torch.nn.Module):
 
                 # add top concept to the current codes
                 to_add = torch.nn.functional.one_hot(idx, num_classes=codes.shape[1]).to(dtype=x.dtype)
-                print(f"==>> to_add.shape: {to_add.shape}")
                 to_add = to_add * val.unsqueeze(1)
                 to_add = to_add * lam
 
