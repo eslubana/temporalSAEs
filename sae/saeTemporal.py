@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torch
 import yaml
 import os
 from sae.utils import ManualAttention
@@ -9,7 +8,8 @@ from sae.utils import ManualAttention
 
 class TemporalSAE(torch.nn.Module):
     def __init__(self, dimin=2, width=5, n_heads=8, sae_diff_type='relu', kval_topk=None, tied_weights=True,
-        n_attn_layers=1, bottleneck_factor=64):
+        n_attn_layers=1, bottleneck_factor=64, inference_mode_batchtopk=False, 
+        min_act_regularizer_batchtopk=0.999):
         """
         dimin: (int)
             input dimension
@@ -23,6 +23,10 @@ class TemporalSAE(torch.nn.Module):
             k in topk sae_diff_type
         n_attn_layers: (int)
             number of attention layers
+        inference_mode_batchtopk: (bool)
+            whether to use inference mode for batchtopk
+        min_act_regularizer_batchtopk: (float)
+            exponential moving average weight for batchtopk threshold
         """
         super(TemporalSAE, self).__init__()
         self.sae_type = 'temporal'
@@ -50,7 +54,14 @@ class TemporalSAE(torch.nn.Module):
 
         ## SAE-specific parameters
         self.sae_diff_type = sae_diff_type
-        self.kval_topk = kval_topk if sae_diff_type == 'topk' else None
+        self.kval_topk = kval_topk if sae_diff_type in ['topk', 'batchtopk'] else None
+
+        ## BatchTopK-specific parameters
+        if sae_diff_type == 'batchtopk':
+            self.inference_mode_batchtopk = inference_mode_batchtopk
+            self.expected_min_act = nn.Parameter(torch.zeros(1))
+            self.expected_min_act.requires_grad = False
+            self.min_act_regularizer_batchtopk = min_act_regularizer_batchtopk
 
     def forward(self, x_input, return_graph=False, inf_k=None):
         B, L, _ = x_input.size()
@@ -102,6 +113,37 @@ class TemporalSAE(torch.nn.Module):
             mask.scatter_(-1, topk_indices, 1)
             z_novel = z_novel * mask
 
+        elif self.sae_diff_type=='batchtopk':
+            kval = self.kval_topk if inf_k is None else inf_k
+            kval_full_batch = kval * B * L  # Total activations across batch and sequence
+            
+            # Encode
+            z_novel = F.relu(torch.matmul(x_input * self.lam, E))
+            
+            # Sparsify
+            if not self.inference_mode_batchtopk:
+                # Do batch top k sparsification during training
+                z_flat = z_novel.flatten()
+                topk_values, topk_indices = torch.topk(z_flat, kval_full_batch, dim=-1)
+                z_novel_sparse = torch.zeros_like(z_flat)
+                z_novel_sparse.scatter_(-1, topk_indices, topk_values)
+                z_novel = z_novel_sparse.reshape(z_novel.shape)
+                
+                # Update moving average of min activations for thresholding during inference
+                active = z_flat[z_flat > 0]  # Get all positive activations
+                if active.size(0) == 0:
+                    min_activation = 0.0
+                else:
+                    min_activation = active.min().detach().to(dtype=z_novel.dtype)
+                
+                # Exponential moving average update
+                self.expected_min_act[0] = (self.min_act_regularizer_batchtopk * self.expected_min_act[0]) + (
+                    (1 - self.min_act_regularizer_batchtopk) * min_activation
+                )
+            else:
+                # Do threshold-based sparsification during inference
+                z_novel = z_novel * (z_novel > self.expected_min_act[0])
+
         elif self.sae_diff_type=='nullify':
             z_novel = torch.zeros_like(z_pred)
 
@@ -150,6 +192,8 @@ class TemporalSAE(torch.nn.Module):
             'tied_weights': config['sae']['tied_weights'],
             'n_attn_layers': config['sae']['n_attn_layers'],
             'bottleneck_factor': config['sae']['bottleneck_factor'],
+            'inference_mode_batchtopk': config['sae'].get('inference_mode_batchtopk', False),
+            'min_act_regularizer_batchtopk': config['sae'].get('min_act_regularizer_batchtopk', 0.999),
         }
 
         # Override with any provided kwargs
